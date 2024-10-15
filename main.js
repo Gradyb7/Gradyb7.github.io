@@ -105,7 +105,7 @@ class sceneController {
 
     _LoadModel(name) {
         const loader = new GLTFLoader();
-        let path = 'C:/Users/grady/OneDrive/Documents/Programming Projects/ThreeJSCharacterController/resources/' + name + '/scene.gltf';
+        let path = 'resources/' + name + '/scene.gltf';
         loader.load( path, ( gltf ) => {
             this._scene.add( gltf.scene );
         });
