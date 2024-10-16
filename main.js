@@ -24,19 +24,18 @@ class SceneManager {
     constructor() {
         this.currentScene = null;
     }
-       
-    loadScene(sceneController) {
-        if (this.currentScene != null) {
+
+    loadScene(scene) {
+        if (this.currentScene) {
             this.currentScene.dispose();
         }
-        this.currentScene = sceneController;
+        this.currentScene = scene;
+        this._scene = scene.scene;
     }
 
-    switchScene( targetScene ) {      
-        const newSceneController = new sceneController( targetScene );
-        this.loadScene( newSceneController );
+    switchScene(scene) {
+        this.loadScene(scene);
     }
-
 }
 
 class sceneController {
@@ -99,6 +98,22 @@ class sceneController {
         this._AnimationLoop();
     }
 
+    dispose() {
+        // Dispose of the scene resources here
+        this.scene.traverse((object) => {
+            if (!object.isMesh) return;
+
+            object.geometry.dispose();
+
+            if (object.material.isMaterial) {
+                cleanMaterial(object.material);
+            } else {
+                // an array of materials
+                for (const material of object.material) cleanMaterial(material);
+            }
+        });
+    }
+    
     _AnimationLoop() {
         this._renderer.render( this._scene, this._camera );
     }
@@ -109,6 +124,18 @@ class sceneController {
         loader.load( path, ( gltf ) => {
             this._scene.add( gltf.scene );
         });
+    }
+}
+
+function cleanMaterial(material) {
+    material.dispose();
+
+    // dispose textures
+    for (const key in material) {
+        const value = material[key];
+        if (value && typeof value === 'object' && 'minFilter' in value) {
+            value.dispose();
+        }
     }
 }
 
