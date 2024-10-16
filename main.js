@@ -1,6 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.118/build/three.module.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.118.1/examples/jsm/loaders/GLTFLoader.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/controls/OrbitControls.js';
+import {FBXLoader} from 'https://cdn.jsdelivr.net/npm/three@0.118.1/examples/jsm/loaders/FBXLoader.js';
 
 class SceneManager {
     constructor() {
@@ -10,7 +11,7 @@ class SceneManager {
         document.body.appendChild(this.renderer.domElement);
 
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, -1, 0);  
+        this.camera.position.set(0, 0, -1);  
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.update();
@@ -70,7 +71,7 @@ class SceneController {
         this._setupLights();
         this._LoadModel(name);
         if (name === "scene1") {
-            this._LoadModel("character");
+            this._LoadModel("zombie");
         }
     }
 
@@ -157,6 +158,17 @@ class InputHandler {
         }
     }
 
+}
+
+class AnimationManager {
+    constructor() {
+        
+    }
+
+    FBXLoader() {
+        const loader = new FBXLoader();
+        const path = `resources/zombie/mremireh_o_desbiens.fbx`;
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
