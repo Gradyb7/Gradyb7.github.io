@@ -12,10 +12,10 @@ class inputHandler {
 
     _onKeyDown(event) {
         if ( event.key == "1" ) {
-            this.sceneManager.switchScene(new sceneController("scene1"));
+            this.sceneManager.switchScene("scene1");
         }
         else if ( event.key == "2" ) {
-            this.sceneManager.switchScene(new sceneController("scene2"));
+            this.sceneManager.switchScene("scene2");
         }
     }
 }
@@ -26,13 +26,15 @@ class SceneManager {
     }
 
     loadScene(scene) {
-        if (this.currentScene) {
-            this.currentScene.dispose();
+        if (this.currentScene == "scene1") {
+            this._renderer.render( scene1, this._camera );
         }
+        if (this.currentScene == "scene2") {
+            
         this.currentScene = scene;
         this._scene = scene.scene;
+        }
     }
-
     switchScene(scene) {
         this.loadScene(scene);
     }
@@ -97,24 +99,8 @@ class sceneController {
         
         this._AnimationLoop();
     }
-
-    dispose() {
-        // Dispose of the scene resources here
-        this.scene.traverse((object) => {
-            if (!object.isMesh) return;
-
-            object.geometry.dispose();
-
-            if (object.material.isMaterial) {
-                cleanMaterial(object.material);
-            } else {
-                // an array of materials
-                for (const material of object.material) cleanMaterial(material);
-            }
-        });
-    }
     
-    _AnimationLoop() {
+    _AnimationLoop(scene, camera) {
         this._renderer.render( this._scene, this._camera );
     }
 
@@ -127,21 +113,10 @@ class sceneController {
     }
 }
 
-function cleanMaterial(material) {
-    material.dispose();
-
-    // dispose textures
-    for (const key in material) {
-        const value = material[key];
-        if (value && typeof value === 'object' && 'minFilter' in value) {
-            value.dispose();
-        }
-    }
-}
-
 window.addEventListener('DOMContentLoaded', () => {
     const _SCENE_MANAGER = new SceneManager();
     const scene1 = new sceneController("scene1");
     _SCENE_MANAGER.loadScene(scene1);
+    const scene2 = new sceneController("scene2");
     const _INPUT = new inputHandler(_SCENE_MANAGER); 
 });
