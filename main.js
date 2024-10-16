@@ -18,6 +18,8 @@ class SceneManager {
 
         this._scenes = {};
         this.clock = new THREE.Clock();  
+
+        this.currentEntitys = [];
         
         this._AnimationLoop();
     }
@@ -29,50 +31,91 @@ class SceneManager {
         }
     }
 
+    addLoadedEntity(entity) {
+        this.currentEntitys.push(entity);
+    }
+
     switchScene(sceneName) {
         this.currentScene = this._scenes[sceneName];
     }
 
     _AnimationLoop() {
         requestAnimationFrame(() => this._AnimationLoop());
+        
         this.controls.update();
-
+        
         if (this.currentScene) {
             const delta = this.clock.getDelta();  
-            this.currentScene.update(delta);
             this.renderer.render(this.currentScene.getScene(), this.camera);
+
+            if (this.currentEntitys.length > 0) {
+                for (let i = 0; i < this.currentEntitys.length; i++) {
+                    const entity = this.currentEntitys[i];
+                    if (entity.animationManager && typeof entity.animationManager.runAnimations === 'function') {
+                        entity.animationManager.runAnimations(delta);
+                    }
+                }
+            }
         }
     }
 }
 
-class CharacterManager {
-    constructor() {
-        this._character = null;
-    }
+class EntityManager {    
+    constructor(name, loaded, type, sceneManager) {
+        this._scene = sceneManager.currentScene.getScene();
+        this._name = name;
+        this._loaded = loaded;
+        this._type = type;
+        this._state = "idle";
+        this.position = new THREE.Vector3(0, 0, 0);
 
-    setCharacter(character) {
-        this._character = character;  // Store the character model reference
-    }
-
-    getCharacterPosition() {
-        if (this._character) {
-            return this._character.position;  // Return the position of the character
-        } else {
-            console.warn("Character model is not loaded yet.");
-            return null;
+        this._animationManager = new AnimationManager(this._name);
+        
+        if ( this._loaded === true) {
+            this.entityLoader();
+            sceneManager.addLoadedEntity(this._name); 
         }
+
+        this._decceleration = new THREE.Vector3(-0.0005, -0.0001, -5.0);
+        this._acceleration = new THREE.Vector3(1, 0.25, 50.0);
+        this._velocity = new THREE.Vector3(0, 0, 0);
+
+    }
+
+    entityLoader() {
+        if ( this._loaded === true) {
+            if ( this._type === "fbx") {
+                const loader = new FBXLoader();
+                loader.load(`resources/${this._name}/${this._name}.fbx`, (fbx) => {
+                    fbx.scale.setScalar(0.01);
+                    this._scene.add(fbx);
+                });
+                this._animationManager.loadAnimations(this._name);
+            }
+            else {
+                const loader = new GLTFLoader();
+                loader.load(`resources/${this._name}.gltf`, (gltf) => {
+                    this._scene.add(gltf.scene);
+                });
+            }
+        }
+    }
+
+    getEntityState() {
+        console.log(this._state);
+        return this._state;
+    }
+
+    getEntityPosition() {
+        return this.position;
     }
 }
 
 class SceneController {
-    constructor(name, characterManager) {
+    constructor(name) {
         this._scene = new THREE.Scene();
-        this._characterManager = characterManager;  // Store reference to CharacterManager
         this._setupLights();
         this._LoadModel(name);
-        if (name === "scene1") {
-            this._LoadModel("zombie");
-        }
     }
 
     _setupLights() {
@@ -90,24 +133,14 @@ class SceneController {
         light.shadow.camera.bottom = -50;
         this._scene.add(light);
     }
-
+    
     _LoadModel(name) {
         const loader = new GLTFLoader();
         const path = `resources/${name}/scene.gltf`;
+        
         loader.load(path, (gltf) => {
             this._scene.add(gltf.scene);
-            
-            if (name === "character") {
-                // Ensure that characterManager exists and the method is valid
-                if (this._characterManager && typeof this._characterManager.setCharacter === "function") {
-                    this._characterManager.setCharacter(gltf.scene);  // Pass the character model to CharacterManager
-                }
-            }
         });
-    }
-
-    update(delta) {
-        // This function can be used to update animations or objects in the scene
     }
 
     getScene() {
@@ -116,42 +149,42 @@ class SceneController {
 }
 
 class InputHandler { 
-    constructor(sceneManager, characterManager) {
+    constructor(sceneManager, characterHandler) {
         this.sceneManager = sceneManager;
-        this.characterManager = characterManager;
+        this.characterHandler = characterHandler;
         document.addEventListener('keydown', this._onKeyDown.bind(this), false);
     }
 
     _onKeyDown(event) {
         if (event.key === "1") {
             this.sceneManager.switchScene("scene1");
+            console.log();
         } else if (event.key === "2") {
             this.sceneManager.switchScene("scene2");
         }
 
+        const position = this.characterHandler.getEntityPosition();
         if (event.key === "s") {
-            const position = this.characterManager.getCharacterPosition();
             position.z -= 0.1;
             this.sceneManager.camera.position.z -= 0.1;
             console.log(position);
         }
         
         if (event.key === "w") {
-            const position = this.characterManager.getCharacterPosition();
             position.z += 0.1;
+            this.characterHandler.playAnimation('walkForward');
             this.sceneManager.camera.position.z += 0.1;
             console.log(position);
         }
 
         if (event.key === "a") {
-            const position = this.characterManager.getCharacterPosition();
-            position.x -= 0.1;
-            this.sceneManager.camera.position.x -= 0.1;
+            position.x -= 10;
+            this.sceneManager.camera.position.x -= 0;
             console.log(position);
+            
         }
 
         if (event.key === "d") {
-            const position = this.characterManager.getCharacterPosition();
             position.x += 0.1;
             this.sceneManager.camera.position.x += 0.1;
             console.log(position);
@@ -161,25 +194,38 @@ class InputHandler {
 }
 
 class AnimationManager {
-    constructor() {
-        
+    constructor(model) {
+        this._model = model;
+        this._animations = {};
+        this._mixer = new THREE.AnimationMixer(model);
     }
 
-    FBXLoader() {
+    loadAnimations(model) {
         const loader = new FBXLoader();
-        const path = `resources/zombie/mremireh_o_desbiens.fbx`;
+        loader.load(`resources/${model}.fbx`, (fbx) => {
+            fbx.animations.forEach((clip) => {
+                this.animations[clip.name] = clip;
+            });
+        });
     }
+
+    runAnimations(name) {
+        const action = this._mixer.clipAction(this._animations[name]);
+        action.play();
+    }
+
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const characterManager = new CharacterManager();
     const sceneManager = new SceneManager();
 
-    const scene1 = new SceneController("scene1", characterManager);
+    const scene1 = new SceneController("scene1");
     sceneManager.loadScene("scene1", scene1);
 
-    const scene2 = new SceneController("scene2", characterManager);
+    const scene2 = new SceneController("scene2");
     sceneManager.loadScene("scene2", scene2);
 
-    new InputHandler(sceneManager, characterManager);
+    const characterHandler = new EntityManager("zombie", true, "fbx", sceneManager);
+    new InputHandler(sceneManager, characterHandler);
 });
+
