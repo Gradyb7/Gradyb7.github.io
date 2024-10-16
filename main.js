@@ -12,10 +12,10 @@ class inputHandler {
 
     _onKeyDown(event) {
         if ( event.key == "1" ) {
-            this.sceneManager.switchScene( "scene1" );
+            this.sceneManager.switchScene(new sceneController("scene1"));
         }
         else if ( event.key == "2" ) {
-            this.sceneManager.switchScene( "scene2" );
+            this.sceneManager.switchScene(new sceneController("scene2"));
         }
     }
 }
