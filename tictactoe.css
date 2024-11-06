@@ -1,0 +1,33 @@
+td {
+    border: 5px solid black;
+    width: 100px;
+    height: 100px;
+    font-size: 3em;
+    text-align: center;
+    font-family: sans;
+    }
+    /* no border for left column */
+    td:nth-child(1) {
+    border-left: none;
+    }
+    /* no border for right column */
+    td:nth-child(3) {
+    border-right: none;
+    }
+    /* no top border */
+    tr:nth-child(1) > td {
+    border-top: none;
+    }
+    /* no bottom border */
+    tr:nth-child(3) > td {
+    border-bottom: none;
+    }
+    #turn {
+    font-weight: bold;
+    text-transform: capitalize;
+    text-align: center;
+    font-size: 16pt;
+    color: white;
+    background-color: #7703c5;
+    width: 340px;
+    }
